@@ -13,7 +13,7 @@ st.markdown('- Later: Calibration tools to adjust parameters to your exact waste
 
 
 import numpy as np
-from full_adm1f import AppCtx
+from full_adm1f import simulate_single_phase_AD
 
 # Thresholds for stability criteria
 criteria_min = {'Biogas': 55, 'pH': 6.1, 'Alk': 2000, 'NH3': 0, 'NH4': 0, 'VFA': 0, 'LCFA': 0}
@@ -102,7 +102,7 @@ def simulate_single_phase_AD(Q, Vliq, t_resx=0):
         'parameter_scores': scores
     }
 
-import simulate_single_phase_AD  # Adjust import as needed
+#import simulate_single_phase_AD  # Adjust import as needed
 
 st.header("Single-Phase AD Simulation")
 
