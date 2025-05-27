@@ -13,7 +13,7 @@ st.markdown('- Later: Calibration tools to adjust parameters to your exact waste
 
 
 import numpy as np
-from full_adm1f import AppCtx
+from adm1f import AppCtx
 
 # Thresholds for stability criteria
 criteria_min = {'Biogas': 55, 'pH': 6.1, 'Alk': 2000, 'NH3': 0, 'NH4': 0, 'VFA': 0, 'LCFA': 0}
