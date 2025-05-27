@@ -13,7 +13,7 @@ st.markdown('- Later: Calibration tools to adjust parameters to your exact waste
 
 
 import numpy as np
-from adm1f import AppCtx
+from adm1f import AppCtx, setup_ts_solver, PostProcess, ReadParams, ReadInfluent, ReadInitialConditions, DigestParToInterfacePar
 
 # Thresholds for stability criteria
 criteria_min = {'Biogas': 55, 'pH': 6.1, 'Alk': 2000, 'NH3': 0, 'NH4': 0, 'VFA': 0, 'LCFA': 0}
@@ -37,76 +37,30 @@ def stability(x, min_val, max_val):
     else:
         return 0
 
-def simulate_single_phase_AD(Q, Vliq, t_resx=0):
-    """
-    Simulate single-phase anaerobic digestion using Python ADM1 (petsc4py).
-
-    Parameters:
-    - Q: Influent flow rate (m3/d)
-    - Vliq: Reactor volume (m3)
-    - t_resx: Optional SRT - HRT difference (d)
-
-    Returns:
-    - Dictionary with simulation results and stability scores.
-    """
-    # Set up ADM1 context
+def simulate_single_phase_AD(param_file, influent_file, ic_file, debug=False):
     ctx = AppCtx()
+    ctx.debug = debug
 
-    # Load input files (ensure these files exist in the working dir)
-    ctx.LoadInfluent('influent.dat')
-    ctx.LoadParams('params_SRT.dat')
-    ctx.LoadIC('ic.dat')
+    ReadParams(ctx, param_file)
+    ReadInfluent(ctx, influent_file)
+    ReadInitialConditions(ctx, ic_file)
+    DigestParToInterfacePar(ctx)
 
-    # Update volume, flow rate, and t_resx
-    ctx.Vliq = Vliq
-    ctx.Q = Q
-    ctx.t_resx = t_resx
+    ts = setup_ts_solver(ctx)
+    ts.solve(ctx.initialconditions)
+    PostProcess(ts, ctx)
 
-    # Initialize PETSc solver
-    ctx.CreateTS()
-    ctx.SetUpTS()
+    return ctx
 
-    # Run simulation
-    ctx.TSSolve()
 
-    # Extract output values (adjust indices if needed)
-    biogas = ctx.indicator[43]
-    pH = ctx.indicator[26]
-    alk = ctx.indicator[57]
-    nh3 = ctx.indicator[58]
-    nh4 = ctx.indicator[59]
-    vfa = ctx.indicator[54]
-    lcfa = ctx.indicator[2]
-
-    # Compute stability scores
-    scores = {
-        'Biogas': stability(biogas, criteria_min['Biogas'], criteria_max['Biogas']),
-        'pH': stability(pH, criteria_min['pH'], criteria_max['pH']),
-        'Alk': stability(alk, criteria_min['Alk'], criteria_max['Alk']),
-        'NH3': stability(nh3, criteria_min['NH3'], criteria_max['NH3']),
-        'NH4': stability(nh4, criteria_min['NH4'], criteria_max['NH4']),
-        'VFA': stability(vfa, criteria_min['VFA'], criteria_max['VFA']),
-        'LCFA': stability(lcfa, criteria_min['LCFA'], criteria_max['LCFA']),
-    }
-
-    stability_score = np.mean(list(scores.values()))
-
-    return {
-        'reactor_volume (m3)': Vliq,
-        'influent_flow (m3/d)': Q,
-        'HRT (d)': Vliq / Q,
-        'SRT (d)': Vliq / Q + t_resx,
-        'biogas_volume (m3/d)': biogas,
-        'composition': {'CH4 (partial pressure)': ctx.indicator[40], 'CO2': ctx.indicator[41]},
-        'stability_score': stability_score,
-        'parameter_scores': scores
-    }
-
-#import simulate_single_phase_AD  # Adjust import as needed
 
 st.header("Single-Phase AD Simulation")
 
 st.subheader("Enter Basic Reactor Information")
+
+ctx = simulate_single_phase_AD("params.txt", "influent.txt", "initialconditions.txt", debug=True)
+st.write("Simulation complete.")
+st.write("Biogas production rate:", ctx.adm1_output.getArray()[50])  # Example
 
 # User Inputs
 Vliq = st.number_input("Reactor Volume (m³)", min_value=0.1, step=0.1, value=200.0)
